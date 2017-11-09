@@ -35,8 +35,8 @@
 	//ROM
 	`define InstAddrBus 31:0
 	`define InstBus 31:0
-	`define InstMemNum 131071
-	`define InstMemNumLog2 17
+	`define InstMemNum 16383//16383//32767//65535//131071
+	`define InstMemNumLog2 14//14  //15   //16   //17
 
 	//Regfile
 	`define RegAddrBus 4:0

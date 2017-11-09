@@ -92,7 +92,7 @@ end
 
 //Oprand 2
 
-always @(*) begin
+always @(*) begin 
 	if(rst == `RstEnable) begin
 		reg2_o <= `ZeroWord;
 	end else if(reg2_read_o == `ReadEnable) begin 
