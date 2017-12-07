@@ -34,9 +34,9 @@ module id (
 	input wire[`RegAddrBus] mem_wd_i
 );
 
-wire[5:0] op = inst_i[31:26];
+wire[5:0] op = inst_i[31:26]; //inst code
 wire[4:0] op2 = inst_i[10:6];
-wire[5:0] op3 = inst_i[5:0];
+wire[5:0] op3 = inst_i[5:0]; //func code
 wire[4:0] op4 = inst_i[20:16];
 
 reg[`RegBus] imm;
@@ -68,8 +68,87 @@ always @(*) begin
 		reg2_addr_o <= inst_i[20:16];
 		imm <= `ZeroWord;
 
+//TODO
 		case (op)
-			`EXE_ORI : begin
+			`EXE_SPECIAL_INST: begin 
+				case(op2)
+					5'b00000:begin 
+						case (op3)
+							`EXE_OR :begin //OR
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_OR_OP;
+								alusel_o <= `EXE_RES_LOGIC;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+							`EXE_AND :begin //AND
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_AND_OP; //TODO
+								alusel_o <= `EXE_RES_LOGIC;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+							`EXE_XOR :begin //XOR
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_XOR_OP; //TODO
+								alusel_o <= `EXE_RES_LOGIC;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+							`EXE_NOR :begin //NOR
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_NOR_OP; //TODO
+								alusel_o <= `EXE_RES_LOGIC;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+							`EXE_SLLV :begin //SLLV
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_SLL_OP; //TODO
+								alusel_o <= `EXE_RES_SHIFT;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+							`EXE_SRLV :begin //SRLV
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_SRL_OP; //TODO
+								alusel_o <= `EXE_RES_SHIFT;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+							`EXE_SRAV :begin //AND
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_SRA_OP; //TODO
+								alusel_o <= `EXE_RES_SHIFT;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+							`EXE_SYNC :begin //SYNC
+								wreg_o <= `WriteDisable;
+								aluop_o <= `EXE_NOP_OP; //TODO
+								alusel_o <= `EXE_RES_NOP;
+								reg1_read_o <= `ReadDisable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+							end
+
+							default :
+							begin
+							end
+						endcase // op3
+					end // 5'b00000
+				endcase //op2
+
+			end //`EXE_SPECIAL_INST
+
+			`EXE_ORI : begin //ORI
 				wreg_o <= `WriteEnable;
 				aluop_o <= `EXE_OR_OP;
 				alusel_o <= `EXE_RES_LOGIC;
@@ -78,10 +157,81 @@ always @(*) begin
 				imm <= {16'h0, inst_i[15:0]};
 				wd_o <= inst_i[20:16];
 				instValid <= `InstValid;
+			end  //`EXE_ORI
+			`EXE_ANDI :begin //ANDI
+				wreg_o <= `WriteEnable;
+				aluop_o <= `EXE_AND_OP;
+				alusel_o <= `EXE_RES_LOGIC;
+				reg1_read_o <= `ReadEnable;
+				reg2_read_o <= `ReadDisable;
+				imm <= {16'h0, inst_i[15:0]};
+				wd_o <= inst_i[20:16];
+				instValid <= `InstValid;
 			end
-			default: begin
+			`EXE_XORI :begin 
+				wreg_o <= `WriteEnable;
+				aluop_o <= `EXE_XOR_OP;
+				alusel_o <= `EXE_RES_LOGIC;
+				reg1_read_o <= `ReadEnable;
+				reg2_read_o <= `ReadDisable;
+				imm <= {16'h0, inst_i[15:0]};
+				wd_o <= inst_i[20:16];
+				instValid <= `InstValid;
 			end
-		endcase
+			`EXE_LUI :begin 
+				wreg_o <= `WriteEnable;
+				aluop_o <= `EXE_OR_OP;
+				alusel_o <= `EXE_RES_LOGIC;
+				reg1_read_o <= `ReadEnable;
+				reg2_read_o <= `ReadDisable;
+				imm <= {inst_i[15:0], 16'h0};
+				wd_o <= inst_i[20:16];
+				instValid <= `InstValid;
+			end
+			`EXE_PREF :begin 
+				wreg_o <= `WriteDisable;
+				aluop_o <= `EXE_NOP_OP;
+				alusel_o <= `EXE_RES_NOP;
+				reg1_read_o <= `ReadDisable;
+				reg2_read_o <= `ReadDisable;
+				instValid <= `InstValid;
+			end
+			default: 
+			begin
+			end
+
+		endcase //op
+
+		if(inst_i[31:21] == 11'h0) begin 
+			if(op3 == `EXE_SLL) begin 
+				wreg_o <= `WriteEnable;
+				aluop_o <= `EXE_SLL_OP;
+				alusel_o <= `EXE_RES_SHIFT;
+				reg1_read_o <= `ReadDisable;
+				reg2_read_o <= `ReadEnable;
+				imm[4:0] <= inst_i[10:6];
+				wd_o <= inst_i[15:11];
+				instValid <= `InstValid;
+			end else if(op3 == `EXE_SRL) begin 
+				wreg_o <= `WriteEnable;
+				aluop_o <= `EXE_SRL_OP;
+				alusel_o <= `EXE_RES_SHIFT;
+				reg1_read_o <= `ReadDisable;
+				reg2_read_o <= `ReadEnable;
+				imm[4:0] <= inst_i[10:6];
+				wd_o <= inst_i[15:11];
+				instValid <= `InstValid;
+			end else if(op3 == `EXE_SRA) begin 
+				wreg_o <= `WriteEnable;
+				aluop_o <= `EXE_SRA_OP;
+				alusel_o <= `EXE_RES_SHIFT;
+				reg1_read_o <= `ReadDisable;
+				reg2_read_o <= `ReadEnable;
+				imm[4:0] <= inst_i[10:6];
+				wd_o <= inst_i[15:11];
+				instValid <= `InstValid;
+			end
+		end
 
 	end //if
 end //always
