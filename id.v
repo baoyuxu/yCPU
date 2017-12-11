@@ -68,7 +68,6 @@ always @(*) begin
 		reg2_addr_o <= inst_i[20:16];
 		imm <= `ZeroWord;
 
-//TODO
 		case (op)
 			`EXE_SPECIAL_INST: begin 
 				case(op2)
@@ -84,7 +83,7 @@ always @(*) begin
 							end
 							`EXE_AND :begin //AND
 								wreg_o <= `WriteEnable;
-								aluop_o <= `EXE_AND_OP; //TODO
+								aluop_o <= `EXE_AND_OP; 
 								alusel_o <= `EXE_RES_LOGIC;
 								reg1_read_o <= `ReadEnable;
 								reg2_read_o <= `ReadEnable;
@@ -92,7 +91,7 @@ always @(*) begin
 							end
 							`EXE_XOR :begin //XOR
 								wreg_o <= `WriteEnable;
-								aluop_o <= `EXE_XOR_OP; //TODO
+								aluop_o <= `EXE_XOR_OP;
 								alusel_o <= `EXE_RES_LOGIC;
 								reg1_read_o <= `ReadEnable;
 								reg2_read_o <= `ReadEnable;
@@ -100,7 +99,7 @@ always @(*) begin
 							end
 							`EXE_NOR :begin //NOR
 								wreg_o <= `WriteEnable;
-								aluop_o <= `EXE_NOR_OP; //TODO
+								aluop_o <= `EXE_NOR_OP; 
 								alusel_o <= `EXE_RES_LOGIC;
 								reg1_read_o <= `ReadEnable;
 								reg2_read_o <= `ReadEnable;
@@ -108,7 +107,7 @@ always @(*) begin
 							end
 							`EXE_SLLV :begin //SLLV
 								wreg_o <= `WriteEnable;
-								aluop_o <= `EXE_SLL_OP; //TODO
+								aluop_o <= `EXE_SLL_OP; 
 								alusel_o <= `EXE_RES_SHIFT;
 								reg1_read_o <= `ReadEnable;
 								reg2_read_o <= `ReadEnable;
@@ -116,7 +115,7 @@ always @(*) begin
 							end
 							`EXE_SRLV :begin //SRLV
 								wreg_o <= `WriteEnable;
-								aluop_o <= `EXE_SRL_OP; //TODO
+								aluop_o <= `EXE_SRL_OP; 
 								alusel_o <= `EXE_RES_SHIFT;
 								reg1_read_o <= `ReadEnable;
 								reg2_read_o <= `ReadEnable;
@@ -124,7 +123,7 @@ always @(*) begin
 							end
 							`EXE_SRAV :begin //AND
 								wreg_o <= `WriteEnable;
-								aluop_o <= `EXE_SRA_OP; //TODO
+								aluop_o <= `EXE_SRA_OP; 
 								alusel_o <= `EXE_RES_SHIFT;
 								reg1_read_o <= `ReadEnable;
 								reg2_read_o <= `ReadEnable;
@@ -132,13 +131,68 @@ always @(*) begin
 							end
 							`EXE_SYNC :begin //SYNC
 								wreg_o <= `WriteDisable;
-								aluop_o <= `EXE_NOP_OP; //TODO
+								aluop_o <= `EXE_NOP_OP; 
 								alusel_o <= `EXE_RES_NOP;
 								reg1_read_o <= `ReadDisable;
 								reg2_read_o <= `ReadEnable;
 								instValid <= `InstValid;
 							end
-
+							`EXE_MFHI :begin //MFHI
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_MFHI_OP;
+								alusel_o <= `EXE_RES_MOVE;
+								reg1_read_o <= `ReadDisable;
+								reg2_read_o <= `ReadDisable;
+								instValid <= `InstValid;
+							end
+							`EXE_MFLO :begin //MFLO
+								wreg_o <= `WriteEnable;
+								aluop_o <= `EXE_MFLO_OP;
+								alusel_o <= `EXE_RES_MOVE;
+								reg1_read_o <= `ReadDisable;
+								reg2_read_o <= `ReadDisable;
+								instValid <= `InstValid;
+							end
+							`EXE_MTHI :begin 
+								wreg_o <= `WriteDisable;
+								aluop_o <= `EXE_MTHI_OP;
+								alusel_o <= `EXE_RES_MOVE;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadDisable;
+								instValid <= `InstValid;
+							end
+							`EXE_MTLO :begin 
+								wreg_o <= `WriteDisable;
+								aluop_o <= `EXE_MTLO_OP;
+								alusel_o <= `EXE_RES_MOVE;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadDisable;
+								instValid <= `InstValid;
+							end
+							`EXE_MOVN :begin 
+								aluop_o <= `EXE_MOVN_OP;
+								alusel_o <= `EXE_RES_MOVE;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+								if(reg2_o != `ZeroWord)begin 
+									wreg_o <= `WriteEnable;
+								end else begin 
+									wreg_o <= `WriteDisable;
+								end
+							end
+							`EXE_MOVZ :begin 
+								aluop_o <= `EXE_MOVZ_OP;
+								alusel_o <= `EXE_RES_MOVE;
+								reg1_read_o <= `ReadEnable;
+								reg2_read_o <= `ReadEnable;
+								instValid <= `InstValid;
+								if(reg2_o != `ZeroWord)begin 
+									wreg_o <= `WriteEnable;
+								end else begin 
+									wreg_o <= `WriteDisable;
+								end
+							end
 							default :
 							begin
 							end
@@ -261,7 +315,7 @@ end
 //Oprand 2
 
 always @(*) begin 
-	if(rst == `RstEnable) begin
+	if(rst == `RstEnable) 	begin
 		reg2_o <= `ZeroWord;
 	end else if((reg2_read_o == `ReadEnable)&&
 				(ex_wreg_i == `WriteEnable)&&
