@@ -31,7 +31,10 @@ module id (
 	//input from MEM
 	input wire mem_wreg_i,
 	input wire[`RegBus] mem_wdata_i,
-	input wire[`RegAddrBus] mem_wd_i
+	input wire[`RegAddrBus] mem_wd_i,
+
+    //output to CTRL
+    output reg stallReq
 );
 
 wire[5:0] op = inst_i[31:26]; //inst code
@@ -45,6 +48,7 @@ reg instValid;
 
 //Decode
 always @(*) begin
+    stallReq <= `NoStop;
 	if(rst == `RstEnable) begin
 		aluop_o <= `EXE_NOP_OP;
 		alusel_o <= `EXE_RES_NOP;
@@ -375,6 +379,38 @@ always @(*) begin
                     `EXE_MUL :begin
                         wreg_o <= `WriteEnable;
                         aluop_o <= `EXE_MUL_OP;
+                        alusel_o <= `EXE_RES_MUL;
+                        reg1_read_o <= `ReadEnable;
+                        reg2_read_o <= `ReadEnable;
+                        instValid <= `InstValid;
+                    end
+                    `EXE_MADD :begin
+                        wreg_o <= `WriteDisable;
+                        aluop_o <= `EXE_MADD_OP;
+                        alusel_o <= `EXE_RES_MUL;
+                        reg1_read_o <= `ReadEnable;
+                        reg2_read_o <= `ReadEnable;
+                        instValid <= `InstValid;
+                    end
+                    `EXE_MADDU :begin
+                        wreg_o <= `WriteDisable;
+                        aluop_o <= `EXE_MADDU_OP;
+                        alusel_o <= `EXE_RES_MUL;
+                        reg1_read_o <= `ReadEnable;
+                        reg2_read_o <= `ReadEnable;
+                        instValid <= `InstValid;
+                    end
+                    `EXE_MSUB :begin
+                        wreg_o <= `WriteDisable;
+                        aluop_o <= `EXE_MSUB_OP;
+                        alusel_o <= `EXE_RES_MUL;
+                        reg1_read_o <= `ReadEnable;
+                        reg2_read_o <= `ReadEnable;
+                        instValid <= `InstValid;
+                    end
+                    `EXE_MSUBU :begin
+                        wreg_o <= `WriteDisable;
+                        aluop_o <= `EXE_MSUBU_OP;
                         alusel_o <= `EXE_RES_MUL;
                         reg1_read_o <= `ReadEnable;
                         reg2_read_o <= `ReadEnable;

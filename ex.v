@@ -9,12 +9,20 @@ module ex (
 	input wire[`RegBus] reg2_i,
 	input wire[`RegAddrBus] wd_i,
 	input wire wreg_i,
+    
+    input wire[`DoubleRegBus] hilo_temp_i,
+    input wire[1:0] cnt_i,
 
 	//output
 	output reg[`RegAddrBus] wd_o,
 	output reg wreg_o,
 	output reg[`RegBus] wdata_o,
+    
+    output reg[`DoubleRegBus] hilo_temp_o,
+    output reg[1:0] cnt_o,
 
+    //output to CTRL
+    output reg stallReq,
 	//HI && LO
 	input wire[`RegBus] hi_i,
 	input wire[`RegBus] lo_i,
@@ -46,7 +54,8 @@ wire[`RegBus] opdata1_mult;
 wire[`RegBus] opdata2_mult;
 wire[`DoubleRegBus] hilo_temp;
 reg[`DoubleRegBus] mulres;
-
+reg[`DoubleRegBus] hilo_temp1;
+reg stallreg_from_madd_msub;
 
 assign reg2_i_mux = ( (aluop_i == `EXE_SUB_OP) ||
                       (aluop_i == `EXE_SUBU_OP) ||
@@ -198,16 +207,25 @@ always @(*) begin
     end
 end
 
-assign opdata1_mult = (((aluop_i == `EXE_MUL_OP) || (aluop_i == `EXE_MULT_OP))
-                        && (reg1_i[31] == 1'b1)) ? (~reg1_i)+1 : reg1_i;
-assign opdata2_mult = (((aluop_i == `EXE_MUL_OP) || (aluop_i == `EXE_MULT_OP))
-                        && (reg2_i[31] == 1'b1)) ? (~reg2_i)+1 : reg2_i;
+assign opdata1_mult = (((aluop_i == `EXE_MUL_OP) || 
+                        (aluop_i == `EXE_MULT_OP) ||
+                        (aluop_i == `EXE_MADD_OP) ||
+                        (aluop_i == `EXE_MSUB_OP))&& 
+                        (reg1_i[31] == 1'b1)) ? (~reg1_i)+1 : reg1_i;
+assign opdata2_mult = (((aluop_i == `EXE_MUL_OP) ||
+                        (aluop_i == `EXE_MULT_OP) ||
+                        (aluop_i == `EXE_MADD_OP) ||
+                        (aluop_i == `EXE_MSUB_OP)) && 
+                        (reg2_i[31] == 1'b1)) ? (~reg2_i)+1 : reg2_i;
 assign hilo_temp = opdata1_mult * opdata2_mult;
 
 always@(*) begin
     if(rst == `RstEnable)begin
         mulres <= {`ZeroWord, `ZeroWord};
-    end else if((aluop_i == `EXE_MULT_OP)||(aluop_i == `EXE_MUL_OP)) begin
+    end else if((aluop_i == `EXE_MULT_OP) ||
+                (aluop_i == `EXE_MUL_OP) ||
+                (aluop_i == `EXE_MADD_OP) ||
+                (aluop_i == `EXE_MSUB_OP)) begin
         if(reg1_i[31]^reg2_i[31] == 1'b1)begin
             mulres <= ~hilo_temp+1;
         end else begin
@@ -218,7 +236,53 @@ always@(*) begin
     end
 end
 
+always@(*)begin
+    if(rst == `RstEnable)begin
+        hilo_temp_o <= {`ZeroWord, `ZeroWord};
+        cnt_o <= 2'b00;
+        stallreg_from_madd_msub <= `NoStop;
+    end else begin
+        case(aluop_i)
+            `EXE_MADD_OP, `EXE_MADDU_OP :begin
+                if(cnt_i == 2'b00) begin
+                    hilo_temp_o <= mulres;
+                    cnt_o <= 2'b01;
+                    hilo_temp1 <= {`ZeroWord,`ZeroWord};
+                    stallreg_from_madd_msub <= `Stop;
+                end else if(cnt_i == 2'b01) begin
+                    hilo_temp_o <= {`ZeroWord, `ZeroWord};
+                    cnt_o <= 2'b10;
+                    hilo_temp1 <= hilo_temp_i + {HI, LO};
+                    stallreg_from_madd_msub <= `NoStop;
+                end
+            end
+            `EXE_MSUB_OP, `EXE_MSUBU_OP :begin
+                if(cnt_i == 2'b00) begin
+                    hilo_temp_o <= ~mulres + 1;
+                    cnt_o <= 2'b01;
+                    stallreg_from_madd_msub <= `Stop;
+                end else if(cnt_i == 2'b01) begin
+                    hilo_temp_o <= {`ZeroWord, `ZeroWord};
+                    cnt_o <= 2'b10;
+                    hilo_temp1 <= hilo_temp_i + {HI, LO};
+                    stallreg_from_madd_msub <= `NoStop;
+                end
+            end
+            default :begin
+                hilo_temp_o <= {`ZeroWord, `ZeroWord};
+                cnt_o <= 2'b00;
+                stallreg_from_madd_msub <= `NoStop;
+            end
+        endcase
+    end
+end
+
+always@(*)begin
+    stallReq <= stallreg_from_madd_msub;
+end
+
 always @(*) begin //alusel_i
+    stallReq <= `NoStop;
 	wd_o <= wd_i;
     if(((aluop_i == `EXE_ADD_OP) || (aluop_i == `EXE_ADDI_OP) ||
         (aluop_i == `EXE_SUB_OP)) && (ov_sum == 1'b1)) begin
@@ -266,6 +330,16 @@ always @(*) begin //HI LO
 		whilo_o <= `WriteEnable;
 		hi_o <= HI;
 		lo_o <= reg1_i;
+    end else if((aluop_i == `EXE_MSUB_OP) || 
+                (aluop_i == `EXE_MSUBU_OP)) begin
+        whilo_o <= `WriteEnable;
+        hi_o <= hilo_temp1[63:32];
+        lo_o <= hilo_temp1[31:0];
+    end else if((aluop_i == `EXE_MADD_OP) ||
+                (aluop_i == `EXE_MADDU_OP)) begin
+        whilo_o <= `WriteEnable;
+        hi_o <= hilo_temp1[63:32];
+        lo_o <= hilo_temp1[31:0];
 	end else begin 
 		whilo_o <= `WriteDisable;
 		hi_o <= `ZeroWord;

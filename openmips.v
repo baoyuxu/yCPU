@@ -37,9 +37,11 @@ wire[`RegAddrBus] ex_wd_o;
 wire[`RegBus] ex_wdata_o;
 
 wire ex_whilo_o;
-wire reg[`RegBus] ex_hi_o;
-wire reg[`RegBus] ex_lo_o;
+wire[`RegBus] ex_hi_o;
+wire[`RegBus] ex_lo_o;
 
+wire[1:0] ex_cnt_o;
+wire[`DoubleRegBus] ex_hilo_temp_o;
 
 //EX/MEM - MEM
 wire mem_wreg_i;
@@ -49,6 +51,9 @@ wire[`RegBus] mem_wdata_i;
 wire mem_whilo_i;
 wire[`RegBus] mem_hi_i;
 wire[`RegBus] mem_lo_i;
+
+wire[1:0] ex_cnt_i;
+wire[`DoubleRegBus] ex_hilo_temp_i;
 
 //MEM - MEM/WB
 wire mem_wreg_o;
@@ -79,14 +84,18 @@ wire[`RegBus] reg1_data;
 wire[`RegBus] reg2_data;
 wire[`RegAddrBus] reg1_addr;
 wire[`RegAddrBus] reg2_addr;
-
+//CTRL in&&out
+wire[5:0] stall;
+wire stallreq_from_id;
+wire stallreq_from_ex;
 
 //pc_reg 
 pc_reg pc_reg0(
 	.clk	  (clk),
 	.rst	  (rst),
 	.pc 	  (pc),
-	.ce 	  (rom_ce_o)
+	.ce 	  (rom_ce_o),
+    .stall(stall)
 );
 
 assign rom_addr_o = pc;
@@ -99,7 +108,8 @@ if_id if_id0(
 	.if_pc	(pc),
 	.if_inst(rom_data_i),
 	.id_pc  (id_pc_i),
-	.id_inst(id_inst_i)
+	.id_inst(id_inst_i),
+    .stall(stall)
 );
 
 //ID
@@ -131,8 +141,8 @@ id id0(
 
 	.mem_wreg_i(mem_wreg_o),
 	.mem_wdata_i(mem_wdata_o),
-	.mem_wd_i(mem_wd_o)
-
+	.mem_wd_i(mem_wd_o),
+    .stallReq(stallreq_from_id)
 );
 
 //Regfile
@@ -167,7 +177,8 @@ id_ex id_ex0(
 	.ex_reg1  (ex_reg1_i),
 	.ex_reg2  (ex_reg2_i),
 	.ex_wd    (ex_wd_i),
-	.ex_wreg  (ex_wreg_i)
+	.ex_wreg  (ex_wreg_i),
+    .stall(stall)
 );
 //EX
 ex ex0(
@@ -193,7 +204,12 @@ ex ex0(
     .mem_lo_i(mem_lo_o),
     .whilo_o(ex_whilo_o),
     .hi_o(ex_hi_o),
-    .lo_o(ex_lo_o)
+    .lo_o(ex_lo_o),
+    .stallReq(stallreq_from_ex),
+    .hilo_temp_i(ex_hilo_temp_i),
+    .cnt_i(ex_cnt_i),
+    .cnt_o(ex_cnt_o),
+    .hilo_temp_o(ex_hilo_temp_o)
 );
 //EX/MEM
 
@@ -214,7 +230,12 @@ ex_mem ex_mem0(
     .ex_lo(ex_lo_o),
     .mem_whilo(mem_whilo_i),
     .mem_hi(mem_hi_i),
-    .mem_lo(mem_lo_i)
+    .mem_lo(mem_lo_i),
+    .stall(stall),
+    .hilo_i(ex_hilo_temp_o),
+    .cnt_i(ex_cnt_o),
+    .cnt_o(ex_cnt_i),
+    .hilo_o(ex_hilo_temp_i)
 
 );
 
@@ -256,7 +277,8 @@ mem_wb mem_wb0(
     .mem_lo(mem_lo_o),
     .wb_hi(wb_hi_i),
     .wb_lo(wb_lo_i),
-    .wb_whilo(wb_whilo_i)
+    .wb_whilo(wb_whilo_i),
+    .stall(stall)
 );
 
 //HILO
@@ -270,5 +292,12 @@ hilo_reg hilo0(
     .lo_o(hilo_lo_o)
 );
 
+//CTRL
+ctrl ctrl0(
+    .rst(rst),
+    .stallreq_from_id(stallreq_from_id),
+    .stallreq_from_ex(stallreq_from_ex),
+    .stall(stall)
+);
 endmodule
 
