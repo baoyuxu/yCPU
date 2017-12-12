@@ -36,21 +36,41 @@ wire ex_wreg_o;
 wire[`RegAddrBus] ex_wd_o;
 wire[`RegBus] ex_wdata_o;
 
-//EX/MEM - MEM
+wire ex_whilo_o;
+wire reg[`RegBus] ex_hi_o;
+wire reg[`RegBus] ex_lo_o;
 
+
+//EX/MEM - MEM
 wire mem_wreg_i;
 wire[`RegAddrBus] mem_wd_i;
 wire[`RegBus] mem_wdata_i;
+
+wire mem_whilo_i;
+wire[`RegBus] mem_hi_i;
+wire[`RegBus] mem_lo_i;
 
 //MEM - MEM/WB
 wire mem_wreg_o;
 wire[`RegAddrBus] mem_wd_o;
 wire[`RegBus] mem_wdata_o;
 
+wire mem_whilo_o;
+wire[`RegBus] mem_hi_o;
+wire[`RegBus] mem_lo_o;
+
 //MEM/WB
 wire wb_wreg_i;
 wire[`RegAddrBus] wb_wd_i;
 wire[`RegBus] wb_wdata_i;
+
+wire wb_whilo_i;
+wire[`RegBus] wb_hi_i;
+wire[`RegBus] wb_lo_i;
+
+//HILO
+wire[`RegBus] hilo_hi_o;
+wire[`RegBus] hilo_lo_o;
 
 //ID - Regfile
 wire reg1_read;
@@ -161,7 +181,19 @@ ex ex0(
 
 	.wd_o    (ex_wd_o),
 	.wreg_o  (ex_wreg_o),
-	.wdata_o (ex_wdata_o)
+	.wdata_o (ex_wdata_o),
+
+    .hi_i    (hilo_hi_o),
+    .lo_i(hilo_lo_o),
+    .wb_whilo_i(wb_whilo_i),
+    .wb_hi_i(wb_hi_i),
+    .wb_lo_i(wb_lo_i),
+    .mem_hi_i(mem_hi_o),
+    .mem_whilo_i(mem_whilo_o),
+    .mem_lo_i(mem_lo_o),
+    .whilo_o(ex_whilo_o),
+    .hi_o(ex_hi_o),
+    .lo_o(ex_lo_o)
 );
 //EX/MEM
 
@@ -175,7 +207,15 @@ ex_mem ex_mem0(
 
 	.mem_wd   (mem_wd_i),
 	.mem_wreg (mem_wreg_i),
-	.mem_wdata(mem_wdata_i)
+	.mem_wdata(mem_wdata_i),
+
+    .ex_whilo(ex_whilo_o),
+    .ex_hi(ex_hi_o),
+    .ex_lo(ex_lo_o),
+    .mem_whilo(mem_whilo_i),
+    .mem_hi(mem_hi_i),
+    .mem_lo(mem_lo_i)
+
 );
 
 //MEM
@@ -188,7 +228,15 @@ mem mem0(
 
 	.wd_o   (mem_wd_o),
 	.wreg_o (mem_wreg_o),
-	.wdata_o(mem_wdata_o)
+	.wdata_o(mem_wdata_o),
+
+    .whilo_i(mem_whilo_i),
+    .hi_i(mem_hi_i),
+    .lo_i(mem_lo_i),
+    .whilo_o(mem_whilo_o),
+    .hi_o(mem_hi_o),
+    .lo_o(mem_lo_o)
+
 );
 //MEM/WB
 
@@ -201,7 +249,26 @@ mem_wb mem_wb0(
 
 	.wb_wd    (wb_wd_i),
 	.wb_wreg  (wb_wreg_i),
-	.wb_wdata (wb_wdata_i)
+	.wb_wdata (wb_wdata_i),
+
+    .mem_whilo(mem_whilo_o),
+    .mem_hi(mem_hi_o),
+    .mem_lo(mem_lo_o),
+    .wb_hi(wb_hi_i),
+    .wb_lo(wb_lo_i),
+    .wb_whilo(wb_whilo_i)
+);
+
+//HILO
+hilo_reg hilo0(
+    .clk(clk),
+    .rst(rst),
+    .we(wb_whilo_i),
+    .hi_i(wb_hi_i),
+    .lo_i(wb_lo_i),
+    .hi_o(hilo_hi_o),
+    .lo_o(hilo_lo_o)
 );
 
 endmodule
+

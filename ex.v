@@ -139,7 +139,7 @@ always @(*) begin
 	if(rst == `RstEnable) begin 
 		whilo_o <= `WriteDisable;
 		hi_o <= `ZeroWord;
-		lo_i <= `ZeroWord;
+		lo_o <= `ZeroWord;
 	end else if(aluop_i == `EXE_MTHI_OP) begin 
 		whilo_o <= `WriteEnable;
 		hi_o <= reg1_i;
@@ -151,7 +151,7 @@ always @(*) begin
 	end else begin 
 		whilo_o <= `WriteDisable;
 		hi_o <= `ZeroWord;
-		lo_i <= `ZeroWord;
+		lo_o <= `ZeroWord;
 	end
 end
 
