@@ -174,7 +174,7 @@ always @(*) begin
                                  reg1_i[1] ? 30 : reg1_i[0] ? 31 : 32;
             end
             `EXE_CLO_OP :begin
-                arithmeticres <= reg1_i_not[31] ? 0 : reg1_i_not[30] ? 1 :
+                arithmeticRes <= reg1_i_not[31] ? 0 : reg1_i_not[30] ? 1 :
                                  reg1_i_not[29] ? 2 : reg1_i_not[28] ? 3 :
                                  reg1_i_not[27] ? 4 : reg1_i_not[26] ? 5 :
                                  reg1_i_not[25] ? 6 : reg1_i_not[24] ? 7 :
@@ -205,7 +205,7 @@ assign opdata2_mult = (((aluop_i == `EXE_MUL_OP) || (aluop_i == `EXE_MULT_OP))
 assign hilo_temp = opdata1_mult * opdata2_mult;
 
 always@(*) begin
-    if(rst = `RstEnable)begin
+    if(rst == `RstEnable)begin
         mulres <= {`ZeroWord, `ZeroWord};
     end else if((aluop_i == `EXE_MULT_OP)||(aluop_i == `EXE_MUL_OP)) begin
         if(reg1_i[31]^reg2_i[31] == 1'b1)begin
