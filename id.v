@@ -235,7 +235,7 @@ always @(*) begin
                             end
                             `EXE_SUBU :begin
                                 wreg_o <= `WriteEnable;
-                                aluop_o <= `EXE_ADDU_OP;
+                                aluop_o <= `EXE_SUBU_OP;
                                 alusel_o <= `EXE_RES_ARITHMETIC;
                                 reg1_read_o <= `ReadEnable;
                                 reg2_read_o <= `ReadEnable;
