@@ -34,7 +34,15 @@ module ex (
 	input wire mem_whilo_i,
 	output reg[`RegBus] hi_o,
 	output reg[`RegBus] lo_o,
-	output reg whilo_o
+	output reg whilo_o,
+    //input from DIV
+    input wire[`DoubleRegBus] div_result_i,
+    input wire div_ready_i,
+    //output to DIV
+    output reg[`RegBus] div_opdata1_o,
+    output reg[`RegBus] div_opdata2_o,
+    output reg div_start_o,
+    output reg signed_div_o
 );
 
 reg[`RegBus] logicOut;
@@ -56,6 +64,7 @@ wire[`DoubleRegBus] hilo_temp;
 reg[`DoubleRegBus] mulres;
 reg[`DoubleRegBus] hilo_temp1;
 reg stallreg_from_madd_msub;
+reg stallreg_from_div;
 
 assign reg2_i_mux = ( (aluop_i == `EXE_SUB_OP) ||
                       (aluop_i == `EXE_SUBU_OP) ||
@@ -126,6 +135,68 @@ always @(*) begin // SLL
 	end
 end
 
+always@(*) begin //DIV
+    if(rst == `RstEnable) begin
+        stallreg_from_div <= `NoStop;
+        div_opdata1_o <= `ZeroWord;
+        div_opdata2_o <= `ZeroWord;
+        div_start_o <= `DivStop;
+        signed_div_o <= 1'b0;
+    end else begin
+        stallreg_from_div <= `NoStop;
+        div_opdata1_o <= `ZeroWord;
+        div_opdata2_o <= `ZeroWord;
+        div_start_o <= `DivStop;
+        signed_div_o <= 1'b0;
+        case(aluop_i) 
+            `EXE_DIV_OP :begin
+                if(div_ready_i == `DivResultNotReady) begin
+                    div_opdata1_o <= reg1_i;
+                    div_opdata2_o <= reg2_i;
+                    div_start_o <= `DivStart;
+                    signed_div_o <= 1'b1;
+                    stallreg_from_div <= `Stop;
+                end else if(div_ready_i == `DivResultReady) begin
+                    div_opdata1_o <= reg1_i;
+                    div_opdata2_o <= reg2_i;
+                    div_start_o <= `DivStop;
+                    signed_div_o <= 1'b1;
+                    stallreg_from_div <= `NoStop;
+                end else begin
+                    div_opdata1_o <= `ZeroWord;
+                    div_opdata2_o <= `ZeroWord;
+                    div_start_o <= `DivStop;
+                    signed_div_o <= 1'b1;
+                    stallreg_from_div <= `NoStop;
+                end
+            end //EXE_DIV_OP
+            `EXE_DIVU_OP : begin
+                if(div_ready_i == `DivResultNotReady) begin
+                    div_opdata1_o <= reg1_i;
+                    div_opdata2_o <= reg2_i;
+                    div_start_o <= `DivStart;
+                    signed_div_o <= 1'b0;
+                    stallreg_from_div <= `Stop;
+                end else if(div_ready_i == `DivResultReady) begin
+                    div_opdata1_o <= reg1_i;
+                    div_opdata2_o <= reg2_i;
+                    div_start_o <= `DivStop;
+                    signed_div_o <= 1'b0;
+                    stallreg_from_div <= `NoStop;
+                end else begin
+                    div_opdata1_o <= `ZeroWord;
+                    div_opdata2_o <= `ZeroWord;
+                    div_start_o <= `DivStop;
+                    signed_div_o <= 1'b0;
+                    stallreg_from_div <= `NoStop;
+                end
+            end //EXE_DIVU_OP
+            default: begin
+            end
+        endcase
+    end
+end
+
 always @(*) begin //move
 	if(rst == `RstEnable) begin 
 		moveRes <= `ZeroWord;
@@ -150,7 +221,7 @@ always @(*) begin //move
 	end
 end
 
-always @(*) begin
+always @(*) begin //arithmeticRes 
     if(rst == `RstEnable) begin
         arithmeticRes <= `ZeroWord;
     end else begin
@@ -219,7 +290,7 @@ assign opdata2_mult = (((aluop_i == `EXE_MUL_OP) ||
                         (reg2_i[31] == 1'b1)) ? (~reg2_i)+1 : reg2_i;
 assign hilo_temp = opdata1_mult * opdata2_mult;
 
-always@(*) begin
+always@(*) begin //MUL
     if(rst == `RstEnable)begin
         mulres <= {`ZeroWord, `ZeroWord};
     end else if((aluop_i == `EXE_MULT_OP) ||
@@ -278,11 +349,10 @@ always@(*)begin
 end
 
 always@(*)begin
-    stallReq <= stallreg_from_madd_msub;
+    stallReq = stallreg_from_madd_msub || stallreg_from_div;
 end
 
 always @(*) begin //alusel_i
-    stallReq <= `NoStop;
 	wd_o <= wd_i;
     if(((aluop_i == `EXE_ADD_OP) || (aluop_i == `EXE_ADDI_OP) ||
         (aluop_i == `EXE_SUB_OP)) && (ov_sum == 1'b1)) begin
@@ -340,6 +410,10 @@ always @(*) begin //HI LO
         whilo_o <= `WriteEnable;
         hi_o <= hilo_temp1[63:32];
         lo_o <= hilo_temp1[31:0];
+    end else if((aluop_i == `EXE_DIV_OP) || (aluop_i == `EXE_DIVU_OP)) begin
+        whilo_o <= `WriteEnable;
+        hi_o <= div_result_i[63:32];
+        lo_o <= div_result_i[31:0];
 	end else begin 
 		whilo_o <= `WriteDisable;
 		hi_o <= `ZeroWord;

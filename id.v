@@ -45,7 +45,6 @@ wire[4:0] op4 = inst_i[20:16];
 reg[`RegBus] imm;
 
 reg instValid;
-
 //Decode
 always @(*) begin
     stallReq <= `NoStop;
@@ -257,6 +256,20 @@ always @(*) begin
                                 wreg_o <= `WriteDisable;
                                 aluop_o <= `EXE_MULTU_OP;
                                 alusel_o <= `EXE_RES_ARITHMETIC;
+                                reg1_read_o <= `ReadEnable;
+                                reg2_read_o <= `ReadEnable;
+                                instValid <= `InstValid;
+                            end
+                            `EXE_DIV :begin
+                                wreg_o <= `WriteDisable;
+                                aluop_o <= `EXE_DIV_OP;
+                                reg1_read_o <= `ReadEnable;
+                                reg2_read_o <= `ReadEnable;
+                                instValid <= `InstValid;
+                            end
+                            `EXE_DIVU : begin
+                                wreg_o <= `WriteDisable;
+                                aluop_o <= `EXE_DIVU_OP;
                                 reg1_read_o <= `ReadEnable;
                                 reg2_read_o <= `ReadEnable;
                                 instValid <= `InstValid;
