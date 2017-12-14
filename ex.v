@@ -42,7 +42,10 @@ module ex (
     output reg[`RegBus] div_opdata1_o,
     output reg[`RegBus] div_opdata2_o,
     output reg div_start_o,
-    output reg signed_div_o
+    output reg signed_div_o,
+    //Delayslot
+    input wire[`RegBus] link_address_i,
+    input wire is_in_delayslot_i
 );
 
 reg[`RegBus] logicOut;
@@ -375,6 +378,9 @@ always @(*) begin //alusel_i
         end
         `EXE_RES_MUL :begin
             wdata_o <= mulres[31:0];
+        end
+        `EXE_RES_JUMP_BRANCH: begin
+            wdata_o <= link_address_i;
         end
 		default :begin 
 			wdata_o <= `ZeroWord;

@@ -7,7 +7,6 @@ module openmips (
 	input wire[`RegBus] rom_data_i,
 
 	//DIFF 
-	//TODO:FIX IT
 	output wire[`RegBus] rom_addr_o,
 	output wire rom_ce_o
 );
@@ -95,13 +94,24 @@ wire[`RegBus] div_opdata2;
 wire div_start;
 wire[`DoubleRegBus] div_result;
 wire div_ready;
+//DelaySlot
+wire[`RegBus] id_link_addr_o;
+wire id_is_in_delayslot_o;
+wire id_next_inst_in_delayslot_o;
+wire[`RegBus] id_branch_target_address_o;
+wire id_branch_flag_o;
+wire ex_is_in_delayslot_i;
+wire[`RegBus] ex_link_address_i;
+wire id_is_in_delayslot_i;
 //pc_reg 
 pc_reg pc_reg0(
 	.clk	  (clk),
 	.rst	  (rst),
 	.pc 	  (pc),
 	.ce 	  (rom_ce_o),
-    .stall(stall)
+    .stall(stall),
+    .branch_flag_i(id_branch_flag_o),
+    .branch_target_address_i(id_branch_target_address_o)
 );
 
 assign rom_addr_o = pc;
@@ -148,7 +158,13 @@ id id0(
 	.mem_wreg_i(mem_wreg_o),
 	.mem_wdata_i(mem_wdata_o),
 	.mem_wd_i(mem_wd_o),
-    .stallReq(stallreq_from_id)
+    .stallReq(stallreq_from_id),
+    .is_in_delayslot_i(id_is_in_delayslot_i),
+    .is_in_delayslot_o(id_is_in_delayslot_o),
+    .link_addr_o(id_link_addr_o),
+    .next_inst_in_delayslot_o(id_next_inst_in_delayslot_o),
+    .branch_target_address_o(id_branch_target_address_o),
+    .branch_flag_o(id_branch_flag_o)
 );
 
 //Regfile
@@ -184,7 +200,13 @@ id_ex id_ex0(
 	.ex_reg2  (ex_reg2_i),
 	.ex_wd    (ex_wd_i),
 	.ex_wreg  (ex_wreg_i),
-    .stall(stall)
+    .stall(stall),
+    .id_link_address(id_link_addr_o),
+    .id_is_in_delayslot(id_is_in_delayslot_o),
+    .next_inst_in_delayslot_i(next_inst_in_delayslot_o),
+    .ex_is_in_delayslot(ex_is_in_delayslot_i),
+    .ex_link_address(ex_link_address_i),
+    .is_in_delayslot_o(id_is_in_delayslot_i)
 );
 //EX
 ex ex0(
@@ -222,7 +244,9 @@ ex ex0(
     .div_opdata1_o(div_opdata1),
     .div_opdata2_o(div_opdata2),
     .div_start_o(div_start),
-    .signed_div_o(signed_div)
+    .signed_div_o(signed_div),
+    .link_address_i(ex_link_address_i),
+    .is_in_delayslot_i(ex_is_in_delayslot_i)
 );
 //EX/MEM
 
