@@ -9,7 +9,8 @@ module ex (
 	input wire[`RegBus] reg2_i,
 	input wire[`RegAddrBus] wd_i,
 	input wire wreg_i,
-    
+    input wire[`RegBus] inst_i,
+
     input wire[`DoubleRegBus] hilo_temp_i,
     input wire[1:0] cnt_i,
 
@@ -20,6 +21,10 @@ module ex (
     
     output reg[`DoubleRegBus] hilo_temp_o,
     output reg[1:0] cnt_o,
+
+    output wire[`AluOpBus] aluop_o,
+    output wire[`RegBus] mem_addr_o,
+    output wire[`RegBus] reg2_o,
 
     //output to CTRL
     output reg stallReq,
@@ -81,6 +86,10 @@ assign reg1_lt_reg2 = (aluop_i == `EXE_SLT_OP) ?
                        (!reg1_i[31] && !reg2_i[31] && result_sum[31]) ||
                     ( reg1_i[31] && reg2_i[31] && result_sum[31])) : (reg1_i < reg2_i);
 assign reg1_i_not = ~reg1_i;
+
+assign aluop_o = aluop_i;
+assign mem_addr_o = reg1_i + {{16{inst_i[15]}}, inst_i[15:0]};
+assign reg2_o = reg2_i;
 
 always @(*) begin
 	if(rst == `RstEnable) begin 
