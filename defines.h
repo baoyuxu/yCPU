@@ -249,8 +249,8 @@
 //数据存储器data_ram
 `define DataAddrBus 31:0
 `define DataBus 31:0
-`define DataMemNum 16384//131071
-`define DataMemNumLog2 14//17
+`define DataMemNum 4096//16384//131071
+`define DataMemNumLog2 12//14//17
 `define ByteWidth 7:0
 
 //通用寄存器regfile

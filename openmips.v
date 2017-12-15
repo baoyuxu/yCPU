@@ -5,10 +5,16 @@ module openmips (
 	input wire clk,
 
 	input wire[`RegBus] rom_data_i,
-
 	//DIFF 
 	output wire[`RegBus] rom_addr_o,
-	output wire rom_ce_o
+	output wire rom_ce_o,
+    //DATA ROM
+    input wire[`RegBus] ram_data_i,
+    output wire[`RegBus] ram_addr_o,
+    output wire[`RegBus] ram_data_o,
+    output wire ram_we_o,
+    output wire[3:0] ram_sel_o,
+    output wire ram_ce_o
 );
 // IF/ID - ID
 wire[`InstAddrBus] pc;
@@ -21,7 +27,7 @@ wire[`RegBus] id_reg1_o;
 wire[`RegBus] id_reg2_o;
 wire id_wreg_o;
 wire[`RegAddrBus] id_wd_o;
-
+wire[`RegBus] id_inst_o;
 // ID/EX - EX
 wire[`AluOpBus] ex_aluop_i;
 wire[`AluSelBus] ex_alusel_i;
@@ -29,7 +35,7 @@ wire[`RegBus] ex_reg1_i;
 wire[`RegBus] ex_reg2_i;
 wire ex_wreg_i;
 wire[`RegAddrBus] ex_wd_i;
-
+wire[`RegBus] ex_inst_i;
 //EX - EX/MEM
 wire ex_wreg_o;
 wire[`RegAddrBus] ex_wd_o;
@@ -41,7 +47,9 @@ wire[`RegBus] ex_lo_o;
 
 wire[1:0] ex_cnt_o;
 wire[`DoubleRegBus] ex_hilo_temp_o;
-
+wire[`AluOpBus] ex_aluop_o;
+wire[`RegBus] ex_mem_addr_o;
+wire[`RegBus] ex_reg2_o;
 //EX/MEM - MEM
 wire mem_wreg_i;
 wire[`RegAddrBus] mem_wd_i;
@@ -53,7 +61,9 @@ wire[`RegBus] mem_lo_i;
 
 wire[1:0] ex_cnt_i;
 wire[`DoubleRegBus] ex_hilo_temp_i;
-
+wire[`AluOpBus] mem_aluop_i;
+wire[`RegBus] mem_mem_addr_i;
+wire[`RegBus] mem_reg2_i;
 //MEM - MEM/WB
 wire mem_wreg_o;
 wire[`RegAddrBus] mem_wd_o;
@@ -103,6 +113,15 @@ wire id_branch_flag_o;
 wire ex_is_in_delayslot_i;
 wire[`RegBus] ex_link_address_i;
 wire id_is_in_delayslot_i;
+
+//LLbit
+wire mem_LLbit_we_o;
+wire mem_LLbit_value_o;
+wire LLbit_we_i;
+wire LLbit_LLbit_i;
+wire LLbit_LLbit_o;
+
+
 //pc_reg 
 pc_reg pc_reg0(
 	.clk	  (clk),
@@ -164,7 +183,9 @@ id id0(
     .link_addr_o(id_link_addr_o),
     .next_inst_in_delayslot_o(id_next_inst_in_delayslot_o),
     .branch_target_address_o(id_branch_target_address_o),
-    .branch_flag_o(id_branch_flag_o)
+    .branch_flag_o(id_branch_flag_o),
+    .inst_o(id_inst_o),
+    .ex_aluop_i(ex_aluop_o)
 );
 
 //Regfile
@@ -206,7 +227,9 @@ id_ex id_ex0(
     .next_inst_in_delayslot_i(next_inst_in_delayslot_o),
     .ex_is_in_delayslot(ex_is_in_delayslot_i),
     .ex_link_address(ex_link_address_i),
-    .is_in_delayslot_o(id_is_in_delayslot_i)
+    .is_in_delayslot_o(id_is_in_delayslot_i),
+    .id_inst(id_inst_o),
+    .ex_inst(ex_inst_i)
 );
 //EX
 ex ex0(
@@ -246,7 +269,11 @@ ex ex0(
     .div_start_o(div_start),
     .signed_div_o(signed_div),
     .link_address_i(ex_link_address_i),
-    .is_in_delayslot_i(ex_is_in_delayslot_i)
+    .is_in_delayslot_i(ex_is_in_delayslot_i),
+    .inst_i(ex_inst_i),
+    .aluop_o(ex_aluop_o),
+    .mem_addr_o(ex_mem_addr_o),
+    .reg2_o(ex_reg2_o)
 );
 //EX/MEM
 
@@ -272,8 +299,13 @@ ex_mem ex_mem0(
     .hilo_i(ex_hilo_temp_o),
     .cnt_i(ex_cnt_o),
     .cnt_o(ex_cnt_i),
-    .hilo_o(ex_hilo_temp_i)
-
+    .hilo_o(ex_hilo_temp_i),
+    .ex_aluop(ex_aluop_o),
+    .ex_mem_addr(ex_mem_addr_o),
+    .ex_reg2(ex_reg2_o),
+    .mem_aluop(mem_aluop_i),
+    .mem_mem_addr(mem_mem_addr_i),
+    .mem_reg2(mem_reg2_i)
 );
 
 //MEM
@@ -293,7 +325,21 @@ mem mem0(
     .lo_i(mem_lo_i),
     .whilo_o(mem_whilo_o),
     .hi_o(mem_hi_o),
-    .lo_o(mem_lo_o)
+    .lo_o(mem_lo_o),
+    .mem_data_i(ram_data_i),
+    .mem_we_o(ram_we_o),
+    .mem_addr_o(ram_addr_o),
+    .mem_sel_o(ram_sel_o),
+    .mem_data_o(ram_data_o),
+    .mem_ce_o(ram_ce_o),
+    .aluop_i(mem_aluop_i),
+    .mem_addr_i(mem_mem_addr_i),
+    .reg2_i(mem_reg2_i),
+    .LLbit_i(LLbit_LLbit_o),
+    .wb_LLbit_we_i(LLbit_we_i),
+    .wb_LLbit_value_i(LLbit_LLbit_i),
+    .LLbit_we_o(mem_LLbit_we_o),
+    .LLbit_value_o(mem_LLbit_value_o)
 
 );
 //MEM/WB
@@ -315,7 +361,11 @@ mem_wb mem_wb0(
     .wb_hi(wb_hi_i),
     .wb_lo(wb_lo_i),
     .wb_whilo(wb_whilo_i),
-    .stall(stall)
+    .stall(stall),
+    .mem_LLbit_we(mem_LLbit_we_o),
+    .mem_LLbit_value(mem_LLbit_value_o),
+    .wb_LLbit_we(LLbit_we_i),
+    .wb_LLbit_value(LLbit_LLbit_i)
 );
 
 //HILO
@@ -349,6 +399,13 @@ div div0(
     .result_o(div_result),
     .ready_o(div_ready)
 );
-
+LLbit_reg LLbit_reg0(
+    .clk(clk),
+    .rst(rst),
+    .flush(1'b0),
+    .LLbit_i(LLbit_LLbit_i),
+    .we(LLbit_we_i),
+    .LLbit_o(LLbit_LLbit_o)
+);
 endmodule
 
