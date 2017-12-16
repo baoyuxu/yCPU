@@ -50,7 +50,19 @@ module ex (
     output reg signed_div_o,
     //Delayslot
     input wire[`RegBus] link_address_i,
-    input wire is_in_delayslot_i
+    input wire is_in_delayslot_i,
+    //CP0
+    input wire mem_cp0_reg_we,
+    input wire[4:0] mem_cp0_reg_write_addr,
+    input wire[`RegBus] mem_cp0_reg_data,
+    input wire wb_cp0_reg_we,
+    input wire wb_cp0_reg_write_addr,
+    input wire wb_cp0_reg_data,
+    input wire[`RegBus] cp0_reg_data_i,
+    output reg[4:0] cp0_reg_read_addr_o,
+    output reg cp0_reg_we_o,
+    output reg[4:0] cp0_reg_write_addr_o,
+    output reg[`RegBus] cp0_reg_data_o
 );
 
 reg[`RegBus] logicOut;
@@ -227,7 +239,7 @@ always @(*) begin //move
 			`EXE_MOVN_OP :begin 
 				moveRes <= reg1_i;
 			end
-			default : begin
+			default : begin//TODO: continues
 			end
 		endcase
 	end
